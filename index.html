@@ -540,11 +540,13 @@
           <button class="admin-tab" onclick="showAdminTab('grupos')">Clasificación grupos</button>
           <button class="admin-tab" onclick="showAdminTab('extra')">Eliminatorias y premios</button>
           <button class="admin-tab" onclick="showAdminTab('parts')">Participantes</button>
+          <button class="admin-tab" onclick="showAdminTab('ui')">Visibilidad</button>
         </div>
         <div id="panel-partidos" class="admin-panel active"></div>
         <div id="panel-grupos" class="admin-panel"></div>
         <div id="panel-extra" class="admin-panel"></div>
         <div id="panel-parts" class="admin-panel"></div>
+        <div id="panel-ui" class="admin-panel"></div>
       </div>
     </div>
 
@@ -555,7 +557,7 @@
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbyV5jxoPQB9K29Kp51JBp_Fk3RItjWagFjgDgwt3DM6yKPd9EMsFlLqIBYNyVZwXms1/exec";
+const API = "https://script.google.com/macros/s/AKfycbzytLaIKFA5XralPk6eQSTTJtR9raVQiyNRnOnSLhTUEw_BU9AfICNGqpZMyTy4K_Y/exec";
 const PASS = "pistacho";
 
 const GRUPOS = {
@@ -573,7 +575,13 @@ const GRUPOS = {
   L:{eq:["Inglaterra","Croacia","Ghana","Panamá"],ps:["Inglaterra-Croacia","Inglaterra-Ghana","Croacia-Ghana"]}
 };
 const PL = {pichichi:"Pichichi",pichichi_espanol:"Pichichi español",mejor_portero:"Mejor portero",mejor_jugador:"Mejor jugador",mejor_jugador_joven:"Mejor jugador joven"};
-
+let UI_CONFIG = {
+  ranking: true,
+  participantes: true,
+  mundial: true,
+  puntuacion: true,
+  admin: true
+};
 // ── STATE ─────────────────────────────────────────────────────
 let S = { participantes: [], resultados: { partidos:{}, grupos:{}, eliminatorias:{cuartos:[],semifinalistas:[],campeon:"",subcampeon:""}, premios:{} }, ranking: [] };
 let activeG = "A";
@@ -877,6 +885,7 @@ function showAdminTab(t) {
   if (t==='grupos')   renderAdminGrupos();
   if (t==='extra')    renderAdminExtra();
   if (t==='parts')    renderAdminParts();
+  if (t==='ui') renderAdminUI();
 }
 
 // ── ADMIN: PARTIDOS ───────────────────────────────────────────
@@ -1053,15 +1062,82 @@ async function delPart(nombre) {
   await apiAction("deleteParticipante", { nombre }, null);
   renderAdminParts();
 }
+// ── ADMIN: UI ──────────────────────────────────────
+
+function renderAdminUI() {
+  const labels = {
+    ranking: "🏆 Ranking",
+    participantes: "👥 Participantes",
+    mundial: "🌍 Mundial",
+    puntuacion: "📋 Puntuación",
+    admin: "⚙️ Admin"
+  };
+
+  let html = `<div class="section-card">
+    <div class="section-title">Visibilidad de páginas</div>`;
+
+  for (const k in UI_CONFIG) {
+    html += `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid var(--border)">
+        <span>${labels[k]}</span>
+        <label>
+          <input type="checkbox" ${UI_CONFIG[k] ? "checked" : ""} onchange="toggleUI('${k}', this.checked)">
+          <span></span>
+        </label>
+      </div>
+    `;
+  }
+
+  html += `
+  <div style="margin-top:15px;display:flex;gap:10px">
+    <button class="btn btn-primary" onclick="saveUIConfig()">💾 Guardar configuración</button>
+  </div>
+`;
+  document.getElementById("panel-ui").innerHTML = html;
+}
+
+async function saveUIConfig() {
+  const body = new URLSearchParams();
+  body.append("action", "saveConfig");
+  body.append("ui_config", JSON.stringify(UI_CONFIG));
+
+  await fetch(API, {
+    method: "POST",
+    mode: "no-cors",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: body.toString()
+  });
+
+  showToast("Configuración enviada (verifica Sheet)");
+}
+
+function toggleUI(key, value) {
+  UI_CONFIG[key] = value;
+  applyUIConfig();
+  showToast(`Sección ${key} ${value ? "activada" : "ocultada"}`);
+}
 
 // ── NAV ───────────────────────────────────────────────────────
 function showView(v) {
+  if (!UI_CONFIG[v]) {
+    showToast("Esta sección está desactivada hasta que todos los participantes hayan sido registrados", true);
+    return;
+  }
+
   document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-  document.getElementById(`view-${v}`).classList.add('active');
+
+  const el = document.getElementById(`view-${v}`);
+  if (!el) return;
+
+  el.classList.add('active');
+
   const views = ['ranking','participantes-view','mundial','puntuacion','admin'];
   const idx = views.indexOf(v);
   if (idx >= 0) document.querySelectorAll('nav button')[idx].classList.add('active');
+
   if (v==='ranking') renderRanking();
   if (v==='participantes-view') renderPList();
   if (v==='mundial') renderMundial();
@@ -1189,9 +1265,25 @@ function showToast(msg, isError) {
   t.className = 'toast' + (isError?' error':'') + ' show';
   setTimeout(() => t.classList.remove("show"), 2500);
 }
+function applyUIConfig() {
+  const map = {
+    ranking: 0,
+    participantes: 1,
+    mundial: 2,
+    puntuacion: 3,
+    admin: 4
+  };
+
+  document.querySelectorAll('nav button').forEach((btn, i) => {
+    const keys = Object.keys(map);
+    const key = keys[i];
+    if (!key) return;
+    btn.style.display = UI_CONFIG[key] ? "inline-block" : "none";
+  });
+}
 
 // ── INIT ──────────────────────────────────────────────────────
-loadAll();
+loadAll().then(applyUIConfig);
 </script>
 </body>
 </html>
