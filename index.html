@@ -445,6 +445,7 @@
       <!-- NAV -->
       <nav>
         <button class="active" onclick="showView('ranking')">🏆 Ranking</button>
+        <button onclick="showView('participantes-view')">👥 Participantes</button>
         <button onclick="showView('mundial')">🌍 El Mundial</button>
         <button onclick="showView('puntuacion')">📋 Puntuación</button>
         <button onclick="showView('admin')">⚙️ Admin</button>
@@ -539,13 +540,11 @@
           <button class="admin-tab" onclick="showAdminTab('grupos')">Clasificación grupos</button>
           <button class="admin-tab" onclick="showAdminTab('extra')">Eliminatorias y premios</button>
           <button class="admin-tab" onclick="showAdminTab('parts')">Participantes</button>
-          <button class="admin-tab" onclick="showAdminTab('ui')">Visibilidad</button>
         </div>
         <div id="panel-partidos" class="admin-panel active"></div>
         <div id="panel-grupos" class="admin-panel"></div>
         <div id="panel-extra" class="admin-panel"></div>
         <div id="panel-parts" class="admin-panel"></div>
-        <div id="panel-ui" class="admin-panel"></div>
       </div>
     </div>
 
@@ -556,7 +555,7 @@
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbzytLaIKFA5XralPk6eQSTTJtR9raVQiyNRnOnSLhTUEw_BU9AfICNGqpZMyTy4K_Y/exec";
+const API = "https://script.google.com/macros/s/AKfycbzoD85jkRSCcW34KdyA-We0q5Y1g2D4ddhpkZwkGIRDpxZrPafNUom5RQAFt1H0Nl9v/exec";
 const PASS = "pistacho";
 
 const GRUPOS = {
@@ -629,12 +628,10 @@ async function loadAll() {
   try {
     const d = await apiGet({ action: "getAll" });
     if (d.error) throw new Error(d.error);
-    if (d.ui_config) UI_CONFIG = { ...UI_CONFIG, ...d.ui_config };
     S.participantes = d.participantes || [];
     S.resultados    = d.resultados    || S.resultados;
     S.ranking       = d.ranking       || [];
     renderAll();
-    applyUIConfig();
   } catch(e) {
     document.getElementById("ranking-root").innerHTML =
       `<div class="empty">⚠️ Error al cargar datos.<br><small>${e.message}</small></div>`;
@@ -718,10 +715,10 @@ function renderRanking() {
     <div class="stat-card sponsor-card">
       <div class="sponsor-card-label">Patrocinat per</div>
       <img 
-  src="https://img.a.transfermarkt.technology/portrait/big/20031-1697644064.jpg?lm=1"
+  src="https://graficaspapallona.com/wp-content/uploads/2021/11/logo-1x-color.png"
   style="
     width:100%;
-    max-width:90px;
+    max-width:130px;
     height:auto;
     object-fit:contain;
     display:block;
@@ -781,7 +778,7 @@ function showDetalle(nombre) {
   const json = part.json;
   const pts = score(json);
 
-  let html = `<button class="back-btn" onclick="hideDetalle()">← Volver al ranking</button>
+  let html = `<button class="back-btn" onclick="hideDetalle()">← Volver a los participantes</button>
   <div class="detail-name">${esc(nombre)}</div>
   <div class="stats-grid">
     <div class="stat-card"><div class="val">${pts.partidos}</div><div class="lbl">Partidos</div></div>
@@ -886,7 +883,6 @@ function showAdminTab(t) {
   if (t==='grupos')   renderAdminGrupos();
   if (t==='extra')    renderAdminExtra();
   if (t==='parts')    renderAdminParts();
-  if (t==='ui') renderAdminUI();
 }
 
 // ── ADMIN: PARTIDOS ───────────────────────────────────────────
@@ -1136,8 +1132,9 @@ function showView(v) {
 
   el.classList.add('active');
 
-  const btn = Array.from(document.querySelectorAll('nav button')).find(b => b.getAttribute('onclick')?.includes(`'${v}'`));
-  if (btn) btn.classList.add('active');
+  const views = ['ranking','participantes-view','mundial','puntuacion','admin'];
+  const idx = views.indexOf(v);
+  if (idx >= 0) document.querySelectorAll('nav button')[idx].classList.add('active');
 
   if (v==='ranking') renderRanking();
   if (v==='participantes-view') renderPList();
