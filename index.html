@@ -555,7 +555,7 @@
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbzoD85jkRSCcW34KdyA-We0q5Y1g2D4ddhpkZwkGIRDpxZrPafNUom5RQAFt1H0Nl9v/exec";
+const API = "https://script.google.com/macros/s/AKfycbzytLaIKFA5XralPk6eQSTTJtR9raVQiyNRnOnSLhTUEw_BU9AfICNGqpZMyTy4K_Y/exec";
 const PASS = "pistacho";
 
 const GRUPOS = {
@@ -628,10 +628,12 @@ async function loadAll() {
   try {
     const d = await apiGet({ action: "getAll" });
     if (d.error) throw new Error(d.error);
+    if (d.ui_config) UI_CONFIG = { ...UI_CONFIG, ...d.ui_config };
     S.participantes = d.participantes || [];
     S.resultados    = d.resultados    || S.resultados;
     S.ranking       = d.ranking       || [];
     renderAll();
+    applyUIConfig();
   } catch(e) {
     document.getElementById("ranking-root").innerHTML =
       `<div class="empty">⚠️ Error al cargar datos.<br><small>${e.message}</small></div>`;
@@ -715,10 +717,10 @@ function renderRanking() {
     <div class="stat-card sponsor-card">
       <div class="sponsor-card-label">Patrocinat per</div>
       <img 
-  src="https://graficaspapallona.com/wp-content/uploads/2021/11/logo-1x-color.png"
+  src="https://img.a.transfermarkt.technology/portrait/big/20031-1697644064.jpg?lm=1"
   style="
     width:100%;
-    max-width:130px;
+    max-width:90px;
     height:auto;
     object-fit:contain;
     display:block;
@@ -778,7 +780,7 @@ function showDetalle(nombre) {
   const json = part.json;
   const pts = score(json);
 
-  let html = `<button class="back-btn" onclick="hideDetalle()">← Volver a los participantes</button>
+  let html = `<button class="back-btn" onclick="hideDetalle()">← Volver al ranking</button>
   <div class="detail-name">${esc(nombre)}</div>
   <div class="stats-grid">
     <div class="stat-card"><div class="val">${pts.partidos}</div><div class="lbl">Partidos</div></div>
@@ -883,6 +885,7 @@ function showAdminTab(t) {
   if (t==='grupos')   renderAdminGrupos();
   if (t==='extra')    renderAdminExtra();
   if (t==='parts')    renderAdminParts();
+  if (t==='ui') renderAdminUI();
 }
 
 // ── ADMIN: PARTIDOS ───────────────────────────────────────────
